@@ -16,10 +16,11 @@ import (
 
 // SidebarItem represents a navigation item.
 type SidebarItem struct {
-	Label  string
-	Icon   string // Unicode icon placeholder
-	Active bool
-	click  widget.Clickable
+	Label    string
+	Icon     string        // Unicode/emoji icon (used when IconData is nil)
+	IconData *widget.Icon  // Material Design iconvg icon (takes priority over Icon)
+	Active   bool
+	click    widget.Clickable
 }
 
 // Sidebar renders a vertical navigation sidebar.
@@ -117,6 +118,13 @@ func (s *Sidebar) layoutItem(gtx layout.Context, item *SidebarItem) layout.Dimen
 					}
 					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							if item.IconData != nil {
+								return layout.Inset{Right: th.Space3}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									iconSz := gtx.Dp(20)
+									gtx.Constraints = layout.Exact(image.Pt(iconSz, iconSz))
+									return item.IconData.Layout(gtx, fg)
+								})
+							}
 							if item.Icon == "" {
 								return layout.Dimensions{}
 							}

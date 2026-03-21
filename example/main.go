@@ -8,6 +8,7 @@ import (
 	_ "net/http/pprof" //nolint
 	"os"
 
+	"image"
 	"image/color"
 
 	"gioui.org/app"
@@ -15,11 +16,36 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	"golang.org/x/exp/shiny/materialdesign/icons"
 
 	"github.com/hongshengjie/gioui-kit/component"
 	kit "github.com/hongshengjie/gioui-kit/layout"
 	"github.com/hongshengjie/gioui-kit/scaffold"
 	"github.com/hongshengjie/gioui-kit/theme"
+)
+
+// mustIcon panics if an iconvg icon fails to parse (should never happen with bundled data).
+func mustIcon(data []byte) *widget.Icon {
+	ic, err := widget.NewIcon(data)
+	if err != nil {
+		panic(err)
+	}
+	return ic
+}
+
+// Prebuilt Material Design icons used across the app.
+var (
+	iconMenu       = mustIcon(icons.NavigationMenu)
+	iconClose      = mustIcon(icons.NavigationClose)
+	iconDashboard  = mustIcon(icons.ActionDashboard)
+	iconComponents = mustIcon(icons.NavigationApps)
+	iconLayout     = mustIcon(icons.ActionViewModule)
+	iconForms      = mustIcon(icons.ContentCreate)
+	iconSettings   = mustIcon(icons.ActionSettings)
+	iconPerson     = mustIcon(icons.SocialPerson)
+	iconCheck      = mustIcon(icons.ActionCheckCircle)
+	iconStar       = mustIcon(icons.ActionStars)
+	iconList       = mustIcon(icons.ActionList)
 )
 
 func main() {
@@ -94,6 +120,16 @@ type App struct {
 	btnDrawerForms    widget.Clickable
 	btnDrawerSettings widget.Clickable
 
+	// --- Icon buttons ---
+	ibnHamburger widget.Clickable
+	ibnClose     widget.Clickable
+	ibnPrimary   widget.Clickable
+	ibnSecondary widget.Clickable
+	ibnAccent    widget.Clickable
+	ibnGhost     widget.Clickable
+	ibnOutline   widget.Clickable
+	ibnError     widget.Clickable
+
 	// --- Overview quick-start ---
 	btnOverview1 widget.Clickable
 	btnOverview2 widget.Clickable
@@ -120,6 +156,37 @@ type App struct {
 	toggle2 widget.Bool
 	toggle3 widget.Bool
 
+	// --- Checkboxes ---
+	check1 widget.Bool
+	check2 widget.Bool
+	check3 widget.Bool
+
+	// --- Radio group ---
+	radioGroup *component.RadioGroup
+
+	// --- Select ---
+	selectComp *component.Select
+
+	// --- Range sliders ---
+	rangeFloat1 widget.Float
+	rangeFloat2 widget.Float
+
+	// --- Rating ---
+	rating *component.Rating
+
+	// --- Accordion ---
+	accordion *component.Accordion
+
+	// --- Menu ---
+	menuItems []*component.MenuItem
+
+	// --- Tooltip ---
+	tooltip *component.Tooltip
+
+	// --- Steps ---
+	steps     *component.Steps
+	stepIndex int
+
 	// --- Progress ---
 	progress float32
 }
@@ -128,11 +195,11 @@ func NewApp() *App {
 	th := theme.Light()
 
 	sideItems := []scaffold.SidebarItem{
-		{Label: "Dashboard", Icon: "◉", Active: true},
-		{Label: "Components", Icon: "◫"},
-		{Label: "Layout", Icon: "⊞"},
-		{Label: "Forms", Icon: "✎"},
-		{Label: "Settings", Icon: "⚙"},
+		{Label: "Dashboard", IconData: iconDashboard, Active: true},
+		{Label: "Components", IconData: iconComponents},
+		{Label: "Layout", IconData: iconLayout},
+		{Label: "Forms", IconData: iconForms},
+		{Label: "Settings", IconData: iconSettings},
 	}
 
 	a := &App{
@@ -142,9 +209,29 @@ func NewApp() *App {
 		modal:    scaffold.NewModal(th),
 		drawer:   scaffold.NewDrawer(th),
 		toast:    scaffold.NewToast(th),
-		compTabs: component.NewTabs(th, []string{"Buttons", "Badges & Chips", "Alerts", "Avatars & Progress"}),
+		compTabs: component.NewTabs(th, []string{"Buttons", "Badges & Chips", "Alerts", "Avatars & Progress", "Controls", "Data Display"}),
 		progress: 0.65,
+		radioGroup: component.NewRadioGroup(th, []string{"Option A", "Option B", "Option C"}),
+		selectComp: component.NewSelect(th, []string{"Apple", "Banana", "Cherry", "Durian", "Elderberry"}),
+		rating:     component.NewRating(th, 5),
+		accordion: component.NewAccordion(th,
+			component.NewAccordionItem("What is GioUI Kit?"),
+			component.NewAccordionItem("How do I install it?"),
+			component.NewAccordionItem("Can I use custom themes?"),
+		),
+		tooltip:   component.NewTooltip(th, "This is a tooltip!"),
+		steps:     component.NewSteps(th, []string{"Account", "Profile", "Review", "Done"}),
+		stepIndex: 1,
+		menuItems: []*component.MenuItem{
+			component.NewMenuItem("Dashboard").WithIcon("◉"),
+			component.NewMenuItem("Components").WithIcon("◫"),
+			component.NewMenuItem("Settings").WithIcon("⚙"),
+		},
 	}
+	a.menuItems[0].Active = true
+	a.rangeFloat1.Value = 0.4
+	a.rangeFloat2.Value = 0.7
+	a.rating.Value = 3
 
 	a.editor1.SingleLine = true
 	a.editor2.SingleLine = true
@@ -179,7 +266,7 @@ func run(w *app.Window) error {
 			gtx := app.NewContext(&ops, e)
 
 			// Hamburger → open drawer
-			if a.btnHamburger.Clicked(gtx) {
+			if a.btnHamburger.Clicked(gtx) || a.ibnHamburger.Clicked(gtx) {
 				a.drawer.Open()
 			}
 			// Drawer nav items
@@ -219,7 +306,7 @@ func run(w *app.Window) error {
 			if a.btnDrawer.Clicked(gtx) {
 				a.drawer.Open()
 			}
-			if a.btnDrawerClose.Clicked(gtx) {
+			if a.btnDrawerClose.Clicked(gtx) || a.ibnClose.Clicked(gtx) {
 				a.drawer.Close()
 			}
 			// Theme switcher
@@ -251,7 +338,7 @@ func (a *App) layout(gtx layout.Context) layout.Dimensions {
 			// start: hamburger on mobile, brand on desktop
 			func(gtx layout.Context) layout.Dimensions {
 				if mobile {
-					return component.NewButton(th, &a.btnHamburger, "≡").WithVariant(component.BtnGhost).Layout(gtx)
+					return component.NewIconButton(th, &a.ibnHamburger, iconMenu).WithVariant(component.BtnGhost).Layout(gtx)
 				}
 				return component.NewText(th, "GioUI Kit").H3().Bold().WithColor(th.Primary).Layout(gtx)
 			},
@@ -303,7 +390,7 @@ func (a *App) layout(gtx layout.Context) layout.Dimensions {
 							return component.NewText(th, "Navigation").H3().Bold().Layout(gtx)
 						}),
 						kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return component.NewButton(th, &a.btnDrawerClose, "✕").WithVariant(component.BtnGhost).WithSize(component.BtnSm).Layout(gtx)
+							return component.NewIconButton(th, &a.ibnClose, iconClose).WithVariant(component.BtnGhost).WithSize(component.BtnSm).Layout(gtx)
 						}),
 					)
 				}),
@@ -311,19 +398,19 @@ func (a *App) layout(gtx layout.Context) layout.Dimensions {
 					return kit.DividerH{Color: th.Base300}.Layout(gtx)
 				}),
 				kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return component.NewButton(th, &a.btnDrawerDash, "◉  Dashboard").WithVariant(component.BtnGhost).Layout(gtx)
+					return drawerNavItem(th, &a.btnDrawerDash, iconDashboard, "Dashboard")(gtx)
 				}),
 				kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return component.NewButton(th, &a.btnDrawerComp, "◫  Components").WithVariant(component.BtnGhost).Layout(gtx)
+					return drawerNavItem(th, &a.btnDrawerComp, iconComponents, "Components")(gtx)
 				}),
 				kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return component.NewButton(th, &a.btnDrawerLayout, "⊞  Layout").WithVariant(component.BtnGhost).Layout(gtx)
+					return drawerNavItem(th, &a.btnDrawerLayout, iconLayout, "Layout")(gtx)
 				}),
 				kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return component.NewButton(th, &a.btnDrawerForms, "✎  Forms").WithVariant(component.BtnGhost).Layout(gtx)
+					return drawerNavItem(th, &a.btnDrawerForms, iconForms, "Forms")(gtx)
 				}),
 				kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return component.NewButton(th, &a.btnDrawerSettings, "⚙  Settings").WithVariant(component.BtnGhost).Layout(gtx)
+					return drawerNavItem(th, &a.btnDrawerSettings, iconSettings, "Settings")(gtx)
 				}),
 			)
 		})
@@ -515,6 +602,10 @@ func (a *App) pageComponents(gtx layout.Context) layout.Dimensions {
 				return a.sectionAlerts(gtx)
 			case 3:
 				return a.sectionAvatarsProgress(gtx)
+			case 4:
+				return a.sectionControls(gtx)
+			case 5:
+				return a.sectionDataDisplay(gtx)
 			default:
 				return a.sectionButtons(gtx)
 			}
@@ -614,6 +705,37 @@ func (a *App) sectionButtons(gtx layout.Context) layout.Dimensions {
 					)
 				})
 			}),
+		// Icon Buttons
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return subSection(th, gtx, "Icon Buttons", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexRow{Gap: 8, Alignment: kit.ItemsCenter}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnPrimary, iconDashboard).WithVariant(component.BtnPrimary).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnSecondary, iconComponents).WithVariant(component.BtnSecondary).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnAccent, iconStar).WithVariant(component.BtnAccent).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnGhost, iconPerson).WithVariant(component.BtnGhost).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnOutline, iconList).WithVariant(component.BtnOutline).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnError, iconCheck).WithVariant(component.BtnError).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnPrimary, iconSettings).WithVariant(component.BtnPrimary).WithSize(component.BtnSm).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewIconButton(th, &a.ibnPrimary, iconSettings).WithVariant(component.BtnPrimary).WithSize(component.BtnLg).Layout(gtx)
+					}),
+				)
+			})
+		}),
 		)
 	})(gtx)
 }
@@ -1197,6 +1319,33 @@ func pageHeader(th *theme.Theme, gtx layout.Context, title, breadcrumb, subtitle
 	)
 }
 
+// drawerNavItem renders a drawer navigation button with a real icon + label.
+func drawerNavItem(th *theme.Theme, click *widget.Clickable, icon *widget.Icon, label string) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			hovered := click.Hovered()
+			col := th.BaseContent
+			if hovered {
+				col = th.Primary
+			}
+			return layout.Inset{Top: th.Space2, Bottom: th.Space2, Left: th.Space3, Right: th.Space3}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						iconSz := gtx.Dp(20)
+						gtx.Constraints = layout.Exact(image.Pt(iconSz, iconSz))
+						return icon.Layout(gtx, col)
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return layout.Inset{Left: th.Space3}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							return component.NewText(th, label).WithColor(col).Layout(gtx)
+						})
+					}),
+				)
+			})
+		})
+	}
+}
+
 func subSection(th *theme.Theme, gtx layout.Context, label string, body layout.Widget) layout.Dimensions {
 	return kit.FlexCol{Gap: 8}.Layout(gtx,
 		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -1239,4 +1388,282 @@ func colorSwatch(th *theme.Theme, name string, bg, fg color.NRGBA) layout.Widget
 			})
 		})
 	}
+}
+
+// ─── Section: Controls ───────────────────────────────────────────────────────
+
+func (a *App) sectionControls(gtx layout.Context) layout.Dimensions {
+	th := a.th
+	return kit.FlexCol{Gap: 24}.Layout(gtx,
+		// Checkboxes
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Checkbox", "Multi-select boolean controls", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 12}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewCheckbox(th, &a.check1, "Accept terms and conditions").Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewCheckbox(th, &a.check2, "Subscribe to newsletter").WithVariant(component.BtnSecondary).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewCheckbox(th, &a.check3, "Enable dark mode").WithVariant(component.BtnAccent).Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Radio
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Radio", "Single-select option group", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 8}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return a.radioGroup.Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, fmt.Sprintf("Selected: %s", a.radioGroup.Items[a.radioGroup.Selected])).Sm().WithColor(theme.Gray500).Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Select
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Select", "Inline expanding dropdown", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 8}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return kit.W(300)(gtx, func(gtx layout.Context) layout.Dimensions {
+							return a.selectComp.Layout(gtx)
+						})
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, fmt.Sprintf("Value: %s", a.selectComp.Value())).Sm().WithColor(theme.Gray500).Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Range
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Range", "Draggable slider", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 16}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return subSection(th, gtx, fmt.Sprintf("Primary — %.0f%%", a.rangeFloat1.Value*100), func(gtx layout.Context) layout.Dimensions {
+							return component.NewRange(th, &a.rangeFloat1).Layout(gtx)
+						})
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return subSection(th, gtx, fmt.Sprintf("Secondary — %.0f%%", a.rangeFloat2.Value*100), func(gtx layout.Context) layout.Dimensions {
+							return component.NewRange(th, &a.rangeFloat2).WithVariant(component.BtnSecondary).Layout(gtx)
+						})
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Rating
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Rating", "Star rating selector", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 8}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return a.rating.Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, fmt.Sprintf("Rating: %d / %d stars", a.rating.Value, a.rating.Max)).Sm().WithColor(theme.Gray500).Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Accordion
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Accordion", "Collapsible content sections", func(gtx layout.Context) layout.Dimensions {
+				bodies := []layout.Widget{
+					func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, "GioUI Kit is a TailwindCSS and DaisyUI inspired component library for the Gio immediate-mode UI framework.").Sm().WithColor(theme.Gray500).Layout(gtx)
+					},
+					func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, "Add github.com/hongshengjie/gioui-kit to your go.mod and import the packages you need.").Sm().WithColor(theme.Gray500).Layout(gtx)
+					},
+					func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, "Yes! Pass any *theme.Theme to component constructors. Use theme.Light(), theme.Dark(), theme.Cupcake(), or theme.Nord().").Sm().WithColor(theme.Gray500).Layout(gtx)
+					},
+				}
+				return a.accordion.Layout(gtx, bodies)
+			})(gtx)
+		}),
+
+		// Menu
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Menu", "Vertical navigation menu", func(gtx layout.Context) layout.Dimensions {
+				return kit.W(200)(gtx, func(gtx layout.Context) layout.Dimensions {
+					return component.NewMenu(th, a.menuItems...).WithBorder().Layout(gtx)
+				})
+			})(gtx)
+		}),
+
+		// Tooltip
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Tooltip", "Hover to reveal tooltip", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexRow{Gap: 16, Alignment: kit.ItemsCenter}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return a.tooltip.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							return component.NewBadge(th, "Hover me").WithVariant(component.BadgePrimary).Layout(gtx)
+						})
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						tip2 := component.NewTooltip(th, "Bottom tooltip").WithPosition(component.TooltipBottom)
+						return tip2.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							return component.NewBadge(th, "Bottom tip").WithVariant(component.BadgeSecondary).Layout(gtx)
+						})
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Divider
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Divider", "Horizontal and labeled dividers", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 16}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewDivider(th).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewDivider(th).WithLabel("OR").Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewDivider(th).WithLabel("Section Break").Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Kbd
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Keyboard Keys", "Keyboard shortcut display", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexRow{Gap: 16, Alignment: kit.ItemsCenter}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewKbd(th, "Ctrl").Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.KbdGroup(th, "Ctrl", "C")(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.KbdGroup(th, "Ctrl", "Shift", "Z")(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewKbd(th, "Enter").Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewKbd(th, "Esc").Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+	)
+}
+
+// ─── Section: Data Display ───────────────────────────────────────────────────
+
+func (a *App) sectionDataDisplay(gtx layout.Context) layout.Dimensions {
+	th := a.th
+	return kit.FlexCol{Gap: 24}.Layout(gtx,
+		// Stat
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Stat", "Metric display cards", func(gtx layout.Context) layout.Dimensions {
+				return kit.Grid{Cols: 1, SmCols: 2, MdCols: 4, Gap: 12}.Layout(gtx,
+					component.NewStat(th, "Total Users", "89,400").WithDesc("↑ 12% from last month").WithFigure("👤").Layout,
+					component.NewStat(th, "Revenue", "$45,231").WithDesc("↑ 8% from last month").WithFigure("💰").Layout,
+					component.NewStat(th, "Active Sessions", "1,429").WithDesc("→ stable").WithFigure("📊").Layout,
+					component.NewStat(th, "Issues", "12").WithDesc("↓ 3 resolved today").WithFigure("⚠").Layout,
+				)
+			})(gtx)
+		}),
+
+		// Steps
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Steps", "Progress wizard indicator", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexCol{Gap: 16}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return a.steps.WithCurrent(a.stepIndex).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewText(th, fmt.Sprintf("Step %d of %d", a.stepIndex+1, len(a.steps.Items))).Sm().WithColor(theme.Gray500).Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Radial Progress
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Radial Progress", "Circular progress indicators", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexRow{Gap: 24, Alignment: kit.ItemsCenter}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewRadialProgress(th, 0.7).WithLabel("70%").Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewRadialProgress(th, 0.45).WithLabel("45%").WithVariant(component.ProgressSecondary).WithSize(96).WithThick(10).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewRadialProgress(th, 1.0).WithLabel("100%").WithVariant(component.ProgressSuccess).Layout(gtx)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return component.NewRadialProgress(th, 0.2).WithLabel("20%").WithVariant(component.ProgressError).Layout(gtx)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Loading
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Loading", "Animated loading indicators", func(gtx layout.Context) layout.Dimensions {
+				return kit.FlexRow{Gap: 32, Alignment: kit.ItemsCenter}.Layout(gtx,
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return kit.FlexCol{Gap: 8}.Layout(gtx,
+							kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return component.NewText(th, "Spinner").Xs().WithColor(theme.Gray400).Layout(gtx)
+							}),
+							kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return component.NewLoading(th).WithVariant(component.LoadingSpinner).Layout(gtx)
+							}),
+						)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return kit.FlexCol{Gap: 8}.Layout(gtx,
+							kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return component.NewText(th, "Dots").Xs().WithColor(theme.Gray400).Layout(gtx)
+							}),
+							kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return component.NewLoading(th).WithVariant(component.LoadingDots).WithSize(40).Layout(gtx)
+							}),
+						)
+					}),
+					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return kit.FlexCol{Gap: 8}.Layout(gtx,
+							kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return component.NewText(th, "Ring").Xs().WithColor(theme.Gray400).Layout(gtx)
+							}),
+							kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return component.NewLoading(th).WithVariant(component.LoadingRing).WithColor(th.Secondary).Layout(gtx)
+							}),
+						)
+					}),
+				)
+			})(gtx)
+		}),
+
+		// Table
+		kit.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return sectionCard(th, "Table", "Data table with headers and rows", func(gtx layout.Context) layout.Dimensions {
+				headers := []string{"Name", "Role", "Status", "Joined"}
+				rows := [][]string{
+					{"Alice Chen", "Admin", "Active", "2023-01"},
+					{"Bob Smith", "Developer", "Active", "2023-03"},
+					{"Carol Wu", "Designer", "Away", "2023-06"},
+					{"Dan Park", "DevOps", "Active", "2024-01"},
+					{"Eve Johnson", "QA", "Offline", "2024-02"},
+				}
+				return component.NewTable(th, headers, rows).WithZebra().WithBorder().Layout(gtx)
+			})(gtx)
+		}),
+	)
 }
