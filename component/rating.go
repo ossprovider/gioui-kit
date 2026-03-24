@@ -14,11 +14,13 @@ import (
 
 // Rating is a DaisyUI-style star rating component.
 type Rating struct {
-	Value   int // 1..Max (0 = none)
-	Max     int
-	Variant BtnVariant
-	clicks  []widget.Clickable
-	th      *theme.Theme
+	Value     int // 1..Max (0 = none)
+	Max       int
+	Variant   BtnVariant
+	FilledIcon *widget.Icon
+	EmptyIcon  *widget.Icon
+	clicks    []widget.Clickable
+	th        *theme.Theme
 }
 
 // NewRating creates a new rating component with max stars.
@@ -37,6 +39,13 @@ func NewRating(th *theme.Theme, max int) *Rating {
 // WithVariant sets the star color variant.
 func (r *Rating) WithVariant(v BtnVariant) *Rating {
 	r.Variant = v
+	return r
+}
+
+// WithStarIcons sets filled and empty star icons.
+func (r *Rating) WithStarIcons(filled, empty *widget.Icon) *Rating {
+	r.FilledIcon = filled
+	r.EmptyIcon = empty
 	return r
 }
 
@@ -78,15 +87,11 @@ func (r *Rating) Layout(gtx layout.Context) layout.Dimensions {
 		}
 	}
 
-	totalW := r.Max*starSize + (r.Max-1)*gap
-	totalH := starSize
+	_ = gap
 
 	children := make([]layout.FlexChild, r.Max)
 	for i := 0; i < r.Max; i++ {
 		i := i
-		if i > 0 {
-			// handled by spacing in layout
-		}
 		children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			var inset layout.Inset
 			if i > 0 {
@@ -101,14 +106,13 @@ func (r *Rating) Layout(gtx layout.Context) layout.Dimensions {
 					if filled {
 						col = accent
 					}
-					// Draw star "★"
 					pointer.CursorPointer.Add(gtx.Ops)
 					return layout.Stack{Alignment: layout.Center}.Layout(gtx,
 						layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 							return layout.Dimensions{Size: sz}
 						}),
 						layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-							return drawStar(gtx, th, col)
+							return r.drawStar(gtx, col, filled)
 						}),
 					)
 				})
@@ -116,13 +120,24 @@ func (r *Rating) Layout(gtx layout.Context) layout.Dimensions {
 		})
 	}
 
-	_ = totalW
-	_ = totalH
-
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx, children...)
 }
 
-// drawStar renders a star glyph centered in the given size.
-func drawStar(gtx layout.Context, th *theme.Theme, col color.NRGBA) layout.Dimensions {
-	return drawText(gtx, th, "★", col, 20, font.Normal)
+func (r *Rating) drawStar(gtx layout.Context, col color.NRGBA, filled bool) layout.Dimensions {
+	icon := r.EmptyIcon
+	if filled {
+		icon = r.FilledIcon
+	}
+	if icon != nil {
+		sz := gtx.Constraints.Max
+		if sz.X <= 0 {
+			sz.X = gtx.Dp(28)
+		}
+		if sz.Y <= 0 {
+			sz.Y = gtx.Dp(28)
+		}
+		gtx.Constraints = layout.Exact(sz)
+		return icon.Layout(gtx, col)
+	}
+	return drawText(gtx, r.th, "★", col, 20, font.Normal)
 }

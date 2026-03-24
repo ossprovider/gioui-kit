@@ -46,6 +46,14 @@ var (
 	iconCheck      = mustIcon(icons.ActionCheckCircle)
 	iconStar       = mustIcon(icons.ActionStars)
 	iconList       = mustIcon(icons.ActionList)
+	iconInfo           = mustIcon(icons.ActionInfo)
+	iconSuccess        = mustIcon(icons.ActionCheckCircle)
+	iconWarning        = mustIcon(icons.AlertWarning)
+	iconError          = mustIcon(icons.AlertError)
+	iconChevronDown    = mustIcon(icons.NavigationArrowDropDown)
+	iconChevronUp      = mustIcon(icons.NavigationArrowDropUp)
+	iconStarFilled     = mustIcon(icons.ToggleStar)
+	iconStarBorder     = mustIcon(icons.ToggleStarBorder)
 )
 
 func main() {
@@ -212,8 +220,8 @@ func NewApp() *App {
 		compTabs: component.NewTabs(th, []string{"Buttons", "Badges & Chips", "Alerts", "Avatars & Progress", "Controls", "Data Display"}),
 		progress: 0.65,
 		radioGroup: component.NewRadioGroup(th, []string{"Option A", "Option B", "Option C"}),
-		selectComp: component.NewSelect(th, []string{"Apple", "Banana", "Cherry", "Durian", "Elderberry"}),
-		rating:     component.NewRating(th, 5),
+		selectComp: component.NewSelect(th, []string{"Apple", "Banana", "Cherry", "Durian", "Elderberry"}).WithChevrons(iconChevronDown, iconChevronUp),
+		rating:     component.NewRating(th, 5).WithStarIcons(iconStarFilled, iconStarBorder),
 		accordion: component.NewAccordion(th,
 			component.NewAccordionItem("What is GioUI Kit?"),
 			component.NewAccordionItem("How do I install it?"),
@@ -223,9 +231,9 @@ func NewApp() *App {
 		steps:     component.NewSteps(th, []string{"Account", "Profile", "Review", "Done"}),
 		stepIndex: 1,
 		menuItems: []*component.MenuItem{
-			component.NewMenuItem("Dashboard").WithIcon("◉"),
-			component.NewMenuItem("Components").WithIcon("◫"),
-			component.NewMenuItem("Settings").WithIcon("⚙"),
+			component.NewMenuItem("Dashboard").WithIcon(iconDashboard),
+			component.NewMenuItem("Components").WithIcon(iconComponents),
+			component.NewMenuItem("Settings").WithIcon(iconSettings),
 		},
 	}
 	a.menuItems[0].Active = true
@@ -522,16 +530,16 @@ func (a *App) pageDashboard(gtx layout.Context) layout.Dimensions {
 			return sectionCard(th, "Recent Activity", "Latest component updates", func(gtx layout.Context) layout.Dimensions {
 				return kit.FlexCol{Gap: 12}.Layout(gtx,
 					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return component.NewAlert(th, "Button layout fixed — text no longer clipped by rounded corners.", component.AlertSuccess).Layout(gtx)
+						return component.NewAlert(th, "Button layout fixed — text no longer clipped by rounded corners.", component.AlertSuccess).WithIcon(iconSuccess).Layout(gtx)
 					}),
 					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return component.NewAlert(th, "Modal backdrop click now closes the dialog.", component.AlertInfo).Layout(gtx)
+						return component.NewAlert(th, "Modal backdrop click now closes the dialog.", component.AlertInfo).WithIcon(iconInfo).Layout(gtx)
 					}),
 					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return component.NewAlert(th, "Toast auto-dismisses after 3 seconds.", component.AlertInfo).Layout(gtx)
+						return component.NewAlert(th, "Toast auto-dismisses after 3 seconds.", component.AlertInfo).WithIcon(iconInfo).Layout(gtx)
 					}),
 					kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return component.NewAlert(th, "Memory explosion bug fixed — clip.Stroke replaced with paint-over.", component.AlertWarning).Layout(gtx)
+						return component.NewAlert(th, "Memory explosion bug fixed — clip.Stroke replaced with paint-over.", component.AlertWarning).WithIcon(iconWarning).Layout(gtx)
 					}),
 				)
 			})(gtx)
@@ -838,16 +846,16 @@ func (a *App) sectionAlerts(gtx layout.Context) layout.Dimensions {
 	return sectionCard(th, "Alerts", "Notification banners for user feedback", func(gtx layout.Context) layout.Dimensions {
 		return kit.FlexCol{Gap: 12}.Layout(gtx,
 			kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return component.NewAlert(th, "This is an informational message.", component.AlertInfo).Layout(gtx)
+				return component.NewAlert(th, "This is an informational message.", component.AlertInfo).WithIcon(iconInfo).Layout(gtx)
 			}),
 			kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return component.NewAlert(th, "Operation completed successfully! Your changes have been saved.", component.AlertSuccess).Layout(gtx)
+				return component.NewAlert(th, "Operation completed successfully! Your changes have been saved.", component.AlertSuccess).WithIcon(iconSuccess).Layout(gtx)
 			}),
 			kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return component.NewAlert(th, "Please review your input before submitting.", component.AlertWarning).Layout(gtx)
+				return component.NewAlert(th, "Please review your input before submitting.", component.AlertWarning).WithIcon(iconWarning).Layout(gtx)
 			}),
 			kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return component.NewAlert(th, "An error occurred. Please try again or contact support.", component.AlertError).Layout(gtx)
+				return component.NewAlert(th, "An error occurred. Please try again or contact support.", component.AlertError).WithIcon(iconError).Layout(gtx)
 			}),
 		)
 	})(gtx)
@@ -1060,13 +1068,13 @@ func (a *App) pageLayout(gtx layout.Context) layout.Dimensions {
 						return subSection(th, gtx, "FlexCol — gap-8", func(gtx layout.Context) layout.Dimensions {
 							return kit.FlexCol{Gap: 8}.Layout(gtx,
 								kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-									return component.NewAlert(th, "Row 1 — stretched full width", component.AlertInfo).Layout(gtx)
+									return component.NewAlert(th, "Row 1 — stretched full width", component.AlertInfo).WithIcon(iconInfo).Layout(gtx)
 								}),
 								kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-									return component.NewAlert(th, "Row 2 — stretched full width", component.AlertSuccess).Layout(gtx)
+									return component.NewAlert(th, "Row 2 — stretched full width", component.AlertSuccess).WithIcon(iconSuccess).Layout(gtx)
 								}),
 								kit.Rigid(func(gtx layout.Context) layout.Dimensions {
-									return component.NewAlert(th, "Row 3 — stretched full width", component.AlertWarning).Layout(gtx)
+									return component.NewAlert(th, "Row 3 — stretched full width", component.AlertWarning).WithIcon(iconWarning).Layout(gtx)
 								}),
 							)
 						})

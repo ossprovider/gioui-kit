@@ -16,12 +16,14 @@ import (
 // Select is a DaisyUI-style select/dropdown component.
 // It expands inline to show options when opened.
 type Select struct {
-	Items    []string
-	Selected int // index of selected item
-	open     bool
-	trigger  widget.Clickable
-	clicks   []widget.Clickable
-	th       *theme.Theme
+	Items        []string
+	Selected     int // index of selected item
+	ChevronDown  *widget.Icon
+	ChevronUp    *widget.Icon
+	open         bool
+	trigger      widget.Clickable
+	clicks       []widget.Clickable
+	th           *theme.Theme
 }
 
 // NewSelect creates a new select component.
@@ -32,6 +34,13 @@ func NewSelect(th *theme.Theme, items []string) *Select {
 		clicks:   make([]widget.Clickable, len(items)),
 		th:       th,
 	}
+}
+
+// WithChevrons sets the open/close indicator icons.
+func (s *Select) WithChevrons(down, up *widget.Icon) *Select {
+	s.ChevronDown = down
+	s.ChevronUp = up
+	return s
 }
 
 // Value returns the currently selected item string.
@@ -91,11 +100,20 @@ func (s *Select) Layout(gtx layout.Context) layout.Dimensions {
 									return drawText(gtx, th, label, th.BaseContent, th.FontSize, font.Normal)
 								}),
 								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-									arrow := "▾"
-									if s.open {
-										arrow = "▴"
-									}
 									return layout.Inset{Left: th.Space2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+										icon := s.ChevronDown
+										if s.open {
+											icon = s.ChevronUp
+										}
+										if icon != nil {
+											iconPx := gtx.Sp(th.SmSize)
+											gtx.Constraints = layout.Exact(image.Pt(iconPx, iconPx))
+											return icon.Layout(gtx, th.BaseContent)
+										}
+										arrow := "▾"
+										if s.open {
+											arrow = "▴"
+										}
 										return drawText(gtx, th, arrow, th.BaseContent, th.SmSize, font.Normal)
 									})
 								}),

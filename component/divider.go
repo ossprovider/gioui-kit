@@ -70,16 +70,11 @@ func (d *Divider) Layout(gtx layout.Context) layout.Dimensions {
 	// Label version: line — text — line
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			h := gtx.Constraints.Max.Y
-			if h == 0 {
-				h = totalH
-			}
-			lineY := h / 2
-			rect := image.Rect(0, lineY, gtx.Constraints.Max.X, lineY+lineThick)
+			rect := image.Rect(0, midY, gtx.Constraints.Max.X, midY+lineThick)
 			defer clip.Rect(rect).Push(gtx.Ops).Pop()
 			paint.ColorOp{Color: lineColor}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
-			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, h)}
+			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, totalH)}
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: th.Space3, Right: th.Space3}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -87,16 +82,11 @@ func (d *Divider) Layout(gtx layout.Context) layout.Dimensions {
 			})
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			h := gtx.Constraints.Max.Y
-			if h == 0 {
-				h = totalH
-			}
-			lineY := h / 2
-			rect := image.Rect(0, lineY, gtx.Constraints.Max.X, lineY+lineThick)
+			rect := image.Rect(0, midY, gtx.Constraints.Max.X, midY+lineThick)
 			defer clip.Rect(rect).Push(gtx.Ops).Pop()
 			paint.ColorOp{Color: lineColor}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
-			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, h)}
+			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, totalH)}
 		}),
 	)
 }

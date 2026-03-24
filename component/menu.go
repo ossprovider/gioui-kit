@@ -17,7 +17,7 @@ import (
 // MenuItem represents a single entry in a Menu.
 type MenuItem struct {
 	Label    string
-	Icon     string // optional emoji/icon prefix
+	Icon     *widget.Icon
 	Active   bool
 	Disabled bool
 	click    widget.Clickable
@@ -28,8 +28,8 @@ func NewMenuItem(label string) *MenuItem {
 	return &MenuItem{Label: label}
 }
 
-// WithIcon sets an icon/emoji prefix for the menu item.
-func (m *MenuItem) WithIcon(icon string) *MenuItem {
+// WithIcon sets a real icon for the menu item.
+func (m *MenuItem) WithIcon(icon *widget.Icon) *MenuItem {
 	m.Icon = icon
 	return m
 }
@@ -155,13 +155,15 @@ func menuItemContent(gtx layout.Context, th *theme.Theme, item *MenuItem, col co
 	if item.Active {
 		w = font.SemiBold
 	}
-	if item.Icon == "" {
+	if item.Icon == nil {
 		return drawText(gtx, th, item.Label, col, th.FontSize, w)
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Right: th.Space2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return drawText(gtx, th, item.Icon, col, th.FontSize, font.Normal)
+				iconPx := gtx.Sp(th.FontSize)
+				gtx.Constraints = layout.Exact(image.Pt(iconPx, iconPx))
+				return item.Icon.Layout(gtx, col)
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
