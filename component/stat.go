@@ -8,18 +8,20 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/widget"
 
 	"github.com/hongshengjie/gioui-kit/theme"
 )
 
 // Stat is a DaisyUI-style stat component for displaying metrics.
 type Stat struct {
-	Title  string
-	Value  string
-	Desc   string
-	Figure string // optional emoji/icon shown on the right
-	bg     color.NRGBA
-	th     *theme.Theme
+	Title      string
+	Value      string
+	Desc       string
+	Figure     string       // optional text/emoji shown on the right (used when FigureIcon is nil)
+	FigureIcon *widget.Icon // optional icon shown on the right (takes priority over Figure)
+	bg         color.NRGBA
+	th         *theme.Theme
 }
 
 // NewStat creates a new stat component.
@@ -33,9 +35,15 @@ func (s *Stat) WithDesc(desc string) *Stat {
 	return s
 }
 
-// WithFigure sets an icon/emoji shown on the right.
+// WithFigure sets a text/emoji shown on the right.
 func (s *Stat) WithFigure(figure string) *Stat {
 	s.Figure = figure
+	return s
+}
+
+// WithFigureIcon sets a *widget.Icon shown on the right (takes priority over WithFigure).
+func (s *Stat) WithFigureIcon(icon *widget.Icon) *Stat {
+	s.FigureIcon = icon
 	return s
 }
 
@@ -88,6 +96,13 @@ func (s *Stat) Layout(gtx layout.Context) layout.Dimensions {
 						)
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						if s.FigureIcon != nil {
+							return layout.Inset{Left: th.Space4}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								iconSz := gtx.Dp(36)
+								gtx.Constraints = layout.Exact(image.Pt(iconSz, iconSz))
+								return s.FigureIcon.Layout(gtx, theme.Opacity(th.BaseContent, 0.3))
+							})
+						}
 						if s.Figure == "" {
 							return layout.Dimensions{}
 						}

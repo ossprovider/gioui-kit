@@ -23,24 +23,24 @@ type ShadowStyle struct {
 // Preset shadows following Tailwind conventions.
 var (
 	ShadowSm = ShadowStyle{
-		OffsetY: 1, Blur: 2,
-		Color: color.NRGBA{A: 13},
+		OffsetY: 1, Blur: 3,
+		Color: color.NRGBA{A: 60},
 	}
 	ShadowMd = ShadowStyle{
-		OffsetY: 4, Blur: 6, Spread: -1,
-		Color: color.NRGBA{A: 20},
+		OffsetY: 4, Blur: 8, Spread: -1,
+		Color: color.NRGBA{A: 80},
 	}
 	ShadowLg = ShadowStyle{
 		OffsetY: 10, Blur: 15, Spread: -3,
-		Color: color.NRGBA{A: 25},
+		Color: color.NRGBA{A: 100},
 	}
 	ShadowXl = ShadowStyle{
 		OffsetY: 20, Blur: 25, Spread: -5,
-		Color: color.NRGBA{A: 30},
+		Color: color.NRGBA{A: 120},
 	}
 	Shadow2xl = ShadowStyle{
 		OffsetY: 25, Blur: 50, Spread: -12,
-		Color: color.NRGBA{A: 40},
+		Color: color.NRGBA{A: 150},
 	}
 )
 
@@ -73,7 +73,7 @@ func (s Shadow) Layout(gtx layout.Context, w layout.Widget) layout.Dimensions {
 		for i := 0; i < layers; i++ {
 			t := float64(i+1) / float64(layers)
 			expand := int(float64(blur)*t) + spread
-			alpha := uint8(float64(s.Style.Color.A) * (1 - t) / float64(layers))
+			alpha := uint8(float64(s.Style.Color.A) * (1 - t))
 			if alpha == 0 {
 				continue
 			}

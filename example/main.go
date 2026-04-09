@@ -54,6 +54,11 @@ var (
 	iconChevronUp   = mustIcon(icons.NavigationArrowDropUp)
 	iconStarFilled  = mustIcon(icons.ToggleStar)
 	iconStarBorder  = mustIcon(icons.ToggleStarBorder)
+	iconHome        = mustIcon(icons.ActionHome)
+	iconSearch      = mustIcon(icons.ActionSearch)
+	iconPeople      = mustIcon(icons.SocialGroup)
+	iconMoney       = mustIcon(icons.EditorAttachMoney)
+	iconTrendingUp  = mustIcon(icons.ActionTrendingUp)
 )
 
 func main() {
@@ -90,7 +95,8 @@ type App struct {
 	toast  *scaffold.Toast
 
 	// Scrolling
-	scroll kit.ScrollY
+	scroll     kit.ScrollY
+	demoScroll kit.ScrollY
 
 	// Navigation
 	pageIndex int // 0=Dashboard 1=Components 2=Layout 3=Forms 4=Settings
@@ -816,25 +822,25 @@ func (a *App) sectionBadgesChips(gtx layout.Context) layout.Dimensions {
 		// Chips
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return sectionCard(th, "Chips", "Removable tag components", func(gtx layout.Context) layout.Dimensions {
-				return kit.FlexRow{Gap: 8, Alignment: kit.ItemsCenter}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return kit.WrapRow{Gap: 8, RowGap: 8}.Layout(gtx,
+					func(gtx layout.Context) layout.Dimensions {
 						return component.NewChip(th, "Design").Layout(gtx)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					},
+					func(gtx layout.Context) layout.Dimensions {
 						return component.NewChip(th, "Engineering").Layout(gtx)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					},
+					func(gtx layout.Context) layout.Dimensions {
 						return component.NewChip(th, "Product").Layout(gtx)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					},
+					func(gtx layout.Context) layout.Dimensions {
 						return component.NewChip(th, "Go").Layout(gtx)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					},
+					func(gtx layout.Context) layout.Dimensions {
 						return component.NewChip(th, "Gio UI").Layout(gtx)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					},
+					func(gtx layout.Context) layout.Dimensions {
 						return component.NewChip(th, "TailwindCSS").Layout(gtx)
-					}),
+					},
 				)
 			})(gtx)
 		}),
@@ -1601,10 +1607,10 @@ func (a *App) sectionDataDisplay(gtx layout.Context) layout.Dimensions {
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return sectionCard(th, "Stat", "Metric display cards", func(gtx layout.Context) layout.Dimensions {
 				return kit.Grid{Cols: 1, SmCols: 2, MdCols: 4, Gap: 12}.Layout(gtx,
-					component.NewStat(th, "Total Users", "89,400").WithDesc("↑ 12% from last month").WithFigure("👤").Layout,
-					component.NewStat(th, "Revenue", "$45,231").WithDesc("↑ 8% from last month").WithFigure("💰").Layout,
-					component.NewStat(th, "Active Sessions", "1,429").WithDesc("→ stable").WithFigure("📊").Layout,
-					component.NewStat(th, "Issues", "12").WithDesc("↓ 3 resolved today").WithFigure("⚠").Layout,
+					component.NewStat(th, "Total Users", "89,400").WithDesc("↑ 12% from last month").WithFigureIcon(iconPeople).Layout,
+					component.NewStat(th, "Revenue", "$45,231").WithDesc("↑ 8% from last month").WithFigureIcon(iconMoney).Layout,
+					component.NewStat(th, "Active Sessions", "1,429").WithDesc("→ stable").WithFigureIcon(iconTrendingUp).Layout,
+					component.NewStat(th, "Issues", "12").WithDesc("↓ 3 resolved today").WithFigureIcon(iconWarning).Layout,
 				)
 			})(gtx)
 		}),
@@ -1758,7 +1764,7 @@ func (a *App) sectionLayout(gtx layout.Context) layout.Dimensions {
 		// ScrollY
 		layout.Rigid(sectionCard(th, "ScrollY", "Vertical scrollable list", func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Max.Y = 200 // limit height for demo
-			return kit.NewScrollY().Layout(gtx, 10, func(gtx layout.Context, i int) layout.Dimensions {
+			return a.demoScroll.Layout(gtx, 10, func(gtx layout.Context, i int) layout.Dimensions {
 				return component.NewText(th, fmt.Sprintf("Scrollable item %d", i+1)).Layout(gtx)
 			})
 		})),
@@ -1766,9 +1772,9 @@ func (a *App) sectionLayout(gtx layout.Context) layout.Dimensions {
 		// BottomNav
 		layout.Rigid(sectionCard(th, "BottomNav", "Mobile-style bottom navigation", func(gtx layout.Context) layout.Dimensions {
 			items := []scaffold.BottomNavItem{
-				{Label: "Home", Icon: "🏠", Active: true},
-				{Label: "Search", Icon: "🔍"},
-				{Label: "Profile", Icon: "👤"},
+				{Label: "Home", IconData: iconHome, Active: true},
+				{Label: "Search", IconData: iconSearch},
+				{Label: "Profile", IconData: iconPerson},
 			}
 			return scaffold.NewBottomNav(th, items).Layout(gtx)
 		})),
@@ -1794,7 +1800,7 @@ func (a *App) sectionModifiers(gtx layout.Context) layout.Dimensions {
 
 		// Shadow
 		layout.Rigid(sectionCard(th, "Shadow", "Drop shadow modifier", func(gtx layout.Context) layout.Dimensions {
-			return modifier.Shadow{}.Layout(gtx,
+			return modifier.Shadow{Style: modifier.ShadowMd, Radius: th.RoundedMd}.Layout(gtx,
 				func(gtx layout.Context) layout.Dimensions {
 					return kit.Box{Padding: layout.Inset{Top: 16, Bottom: 16, Left: 16, Right: 16}, Background: th.Base100, Radius: th.RoundedMd}.Layout(gtx,
 						func(gtx layout.Context) layout.Dimensions {

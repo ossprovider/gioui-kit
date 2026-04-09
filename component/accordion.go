@@ -2,10 +2,13 @@ package component
 
 import (
 	"image"
+	"image/color"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
@@ -115,11 +118,8 @@ func (a *Accordion) Layout(gtx layout.Context, bodies []layout.Widget) layout.Di
 													return drawText(gtx, th, item.Title, th.BaseContent, th.FontSize, font.SemiBold)
 												}),
 												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-													arrow := "▾"
-													if item.open {
-														arrow = "▴"
-													}
-													return drawText(gtx, th, arrow, theme.Opacity(th.BaseContent, 0.5), th.SmSize, font.Normal)
+													sz := gtx.Dp(10)
+													return drawTriangle(gtx.Ops, item.open, theme.Opacity(th.BaseContent, 0.5), sz)
 												}),
 											)
 										})
@@ -167,4 +167,24 @@ func (a *Accordion) Layout(gtx layout.Context, bodies []layout.Widget) layout.Di
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx, children...)
 		}),
 	)
+}
+
+// drawTriangle draws a filled up or down triangle of the given pixel size.
+func drawTriangle(ops *op.Ops, up bool, col color.NRGBA, size int) layout.Dimensions {
+	s := float32(size)
+	half := s / 2
+	var path clip.Path
+	path.Begin(ops)
+	if up {
+		path.MoveTo(f32.Pt(0, s))
+		path.LineTo(f32.Pt(s, s))
+		path.LineTo(f32.Pt(half, 0))
+	} else {
+		path.MoveTo(f32.Pt(0, 0))
+		path.LineTo(f32.Pt(s, 0))
+		path.LineTo(f32.Pt(half, s))
+	}
+	path.Close()
+	paint.FillShape(ops, col, clip.Outline{Path: path.End()}.Op())
+	return layout.Dimensions{Size: image.Pt(size, size)}
 }

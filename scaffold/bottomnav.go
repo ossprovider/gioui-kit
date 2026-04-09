@@ -15,10 +15,11 @@ import (
 )
 
 type BottomNavItem struct {
-	Label  string
-	Icon   string
-	Active bool
-	click  widget.Clickable
+	Label    string
+	Icon     string       // Unicode icon (used when IconData is nil)
+	IconData *widget.Icon // Material Design iconvg icon (takes priority over Icon)
+	Active   bool
+	click    widget.Clickable
 }
 
 // BottomNav renders a mobile-style bottom navigation bar.
@@ -73,19 +74,26 @@ func (bn *BottomNav) Layout(gtx layout.Context) layout.Dimensions {
 							fg = th.Primary
 						}
 						pointer.CursorPointer.Add(gtx.Ops)
-						return layout.Flex{
-							Axis:      layout.Vertical,
-							Alignment: layout.Middle,
-							Spacing:   layout.SpaceSides,
-						}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								iconSize := unit.Sp(20)
-								return drawLabel(gtx, th, item.Icon, fg, iconSize, font.Normal)
-							}),
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return drawLabel(gtx, th, item.Label, fg, th.XsSize, font.Medium)
-							}),
-						)
+						return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							return layout.Flex{
+								Axis:      layout.Vertical,
+								Alignment: layout.Middle,
+							}.Layout(gtx,
+								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+									if item.IconData != nil {
+										iconSz := gtx.Dp(24)
+										gtx.Constraints = layout.Exact(image.Pt(iconSz, iconSz))
+										return item.IconData.Layout(gtx, fg)
+									}
+									return drawLabel(gtx, th, item.Icon, fg, unit.Sp(20), font.Normal)
+								}),
+								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+									return layout.Inset{Top: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+										return drawLabel(gtx, th, item.Label, fg, th.XsSize, font.Medium)
+									})
+								}),
+							)
+						})
 					})
 				})
 			}

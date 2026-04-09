@@ -4,9 +4,11 @@ import (
 	"image"
 	"image/color"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
@@ -71,15 +73,9 @@ func (c *Checkbox) Layout(gtx layout.Context) layout.Dimensions {
 					defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
 					paint.ColorOp{Color: fillCol}.Add(gtx.Ops)
 					paint.PaintOp{}.Add(gtx.Ops)
-					// Centered checkmark
-					return layout.Stack{Alignment: layout.Center}.Layout(gtx,
-						layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-							return layout.Dimensions{Size: sz}
-						}),
-						layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-							return drawText(gtx, c.th, "✓", checkCol, c.th.XsSize, font.Bold)
-						}),
-					)
+					// Draw vector checkmark
+					drawCheckmark(gtx.Ops, sz, checkCol)
+					return layout.Dimensions{Size: sz}
 				}
 				// Unchecked: border box
 				defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
@@ -107,5 +103,25 @@ func (c *Checkbox) Layout(gtx layout.Context) layout.Dimensions {
 				return drawText(gtx, th, c.Label, col, th.FontSize, font.Normal)
 			})
 		}),
+	)
+}
+
+// drawCheckmark draws a vector checkmark centered in sz using the given color.
+func drawCheckmark(ops *op.Ops, sz image.Point, col color.NRGBA) {
+	w := float32(sz.X)
+	h := float32(sz.Y)
+	// Checkmark points: short leg down-left, long leg up-right
+	x1, y1 := w*0.20, h*0.50
+	x2, y2 := w*0.42, h*0.72
+	x3, y3 := w*0.80, h*0.28
+	strokeWidth := w * 0.14
+
+	var path clip.Path
+	path.Begin(ops)
+	path.MoveTo(f32.Pt(x1, y1))
+	path.LineTo(f32.Pt(x2, y2))
+	path.LineTo(f32.Pt(x3, y3))
+	paint.FillShape(ops, col,
+		clip.Stroke{Path: path.End(), Width: strokeWidth}.Op(),
 	)
 }

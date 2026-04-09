@@ -2,7 +2,7 @@ package modifier
 
 import (
 	"gioui.org/layout"
-	"gioui.org/op"
+	"gioui.org/op/paint"
 )
 
 // OpacityMod applies an opacity modifier.
@@ -11,11 +11,6 @@ type OpacityMod struct {
 }
 
 func (o OpacityMod) Layout(gtx layout.Context, w layout.Widget) layout.Dimensions {
-	macro := op.Record(gtx.Ops)
-	dims := w(gtx)
-	call := macro.Stop()
-
-	// Use paint.OpacityOp if available; fallback to color tinting
-	call.Add(gtx.Ops)
-	return dims
+	defer paint.PushOpacity(gtx.Ops, o.Opacity).Pop()
+	return w(gtx)
 }

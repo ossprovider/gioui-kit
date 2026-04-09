@@ -7,8 +7,11 @@ import (
 
 	"gioui.org/font"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/text"
+	"gioui.org/widget"
 
 	"github.com/hongshengjie/gioui-kit/theme"
 )
@@ -93,12 +96,10 @@ func (s *Steps) Layout(gtx layout.Context) layout.Dimensions {
 					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 						// Left line (not for first item)
 						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-							if i == 0 {
-								return layout.Dimensions{Size: image.Pt(0, circleSize)}
-							}
 							w := gtx.Constraints.Max.X
-							if w <= 0 {
-								return layout.Dimensions{}
+							sz := image.Pt(w, circleSize)
+							if i == 0 || w <= 0 {
+								return layout.Dimensions{Size: sz}
 							}
 							col := th.Base300
 							if i <= s.Current {
@@ -108,7 +109,7 @@ func (s *Steps) Layout(gtx layout.Context) layout.Dimensions {
 							defer clip.Rect(rect).Push(gtx.Ops).Pop()
 							paint.ColorOp{Color: col}.Add(gtx.Ops)
 							paint.PaintOp{}.Add(gtx.Ops)
-							return layout.Dimensions{Size: image.Pt(w, circleSize)}
+							return layout.Dimensions{Size: sz}
 						}),
 						// Circle
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -130,22 +131,21 @@ func (s *Steps) Layout(gtx layout.Context) layout.Dimensions {
 									return layout.Dimensions{Size: sz}
 								}),
 								layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-									label := fmt.Sprintf("%d", i+1)
 									if isDone && i < s.Current {
-										label = "✓"
+										checkSz := image.Pt(circleSize*3/5, circleSize*3/5)
+										drawCheckmark(gtx.Ops, checkSz, circleText)
+										return layout.Dimensions{Size: checkSz}
 									}
-									return drawText(gtx, th, label, circleText, th.SmSize, font.Bold)
+									return drawText(gtx, th, fmt.Sprintf("%d", i+1), circleText, th.SmSize, font.Bold)
 								}),
 							)
 						}),
 						// Right line (not for last item)
 						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-							if i == len(s.Items)-1 {
-								return layout.Dimensions{Size: image.Pt(0, circleSize)}
-							}
 							w := gtx.Constraints.Max.X
-							if w <= 0 {
-								return layout.Dimensions{}
+							sz := image.Pt(w, circleSize)
+							if i == len(s.Items)-1 || w <= 0 {
+								return layout.Dimensions{Size: sz}
 							}
 							col := th.Base300
 							if i < s.Current {
@@ -155,7 +155,7 @@ func (s *Steps) Layout(gtx layout.Context) layout.Dimensions {
 							defer clip.Rect(rect).Push(gtx.Ops).Pop()
 							paint.ColorOp{Color: col}.Add(gtx.Ops)
 							paint.PaintOp{}.Add(gtx.Ops)
-							return layout.Dimensions{Size: image.Pt(w, circleSize)}
+							return layout.Dimensions{Size: sz}
 						}),
 					)
 				}),
@@ -166,11 +166,16 @@ func (s *Steps) Layout(gtx layout.Context) layout.Dimensions {
 						if !isDone {
 							col = theme.Opacity(th.BaseContent, 0.5)
 						}
-						w := font.Normal
+						fw := font.Normal
 						if isActive {
-							w = font.SemiBold
+							fw = font.SemiBold
 						}
-						return drawText(gtx, th, item, col, th.XsSize, w)
+						if th.Shaper == nil {
+							th.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(defaultFonts()))
+						}
+						lbl := widget.Label{MaxLines: 1, Alignment: text.Middle}
+						paint.ColorOp{Color: col}.Add(gtx.Ops)
+						return lbl.Layout(gtx, th.Shaper, font.Font{Weight: fw}, th.XsSize, item, op.CallOp{})
 					})
 				}),
 			)
