@@ -123,57 +123,50 @@ func (inp *Input) Layout(gtx layout.Context) layout.Dimensions {
 		// Input field
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			h := gtx.Dp(inp.height())
-			radius := gtx.Dp(th.RoundedLg)
 			borderCol := inp.borderColor()
 
-			return layout.Stack{}.Layout(gtx,
-				layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-					sz := image.Pt(gtx.Constraints.Max.X, h)
-					rrect := clip.UniformRRect(image.Rectangle{Max: sz}, radius)
-					defer rrect.Push(gtx.Ops).Pop()
+			field := func(gtx layout.Context) layout.Dimensions {
+				sz := image.Pt(gtx.Constraints.Max.X, h)
+				gtx.Constraints = layout.Exact(sz)
 
-					// Background
-					paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
-					paint.PaintOp{}.Add(gtx.Ops)
+				return layout.Stack{}.Layout(gtx,
+					layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+						sz := gtx.Constraints.Min
+						defer clip.UniformRRect(image.Rectangle{Max: sz}, gtx.Dp(th.RoundedLg)).Push(gtx.Ops).Pop()
+						paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
+						paint.PaintOp{}.Add(gtx.Ops)
+						return layout.Dimensions{Size: sz}
+					}),
+					layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+						gtx.Constraints.Min.X = gtx.Constraints.Max.X
+						gtx.Constraints.Min.Y = h
+						return layout.Inset{
+							Left: th.Space3, Right: th.Space3,
+							Top: th.Space2, Bottom: th.Space2,
+						}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							if th.Shaper == nil {
+								th.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(defaultFonts()))
+							}
+							textMat := op.Record(gtx.Ops)
+							paint.ColorOp{Color: th.BaseContent}.Add(gtx.Ops)
+							textCallOp := textMat.Stop()
+							selMat := op.Record(gtx.Ops)
+							paint.ColorOp{Color: theme.WithAlpha(th.Primary, 80)}.Add(gtx.Ops)
+							selCallOp := selMat.Stop()
+							if inp.Editor.Text() == "" && inp.Placeholder != "" {
+								drawText(gtx, th, inp.Placeholder,
+									theme.Opacity(th.BaseContent, 0.4), th.FontSize, font.Normal)
+							}
+							return inp.Editor.Layout(gtx, th.Shaper, font.Font{}, th.FontSize, textCallOp, selCallOp)
+						})
+					}),
+				)
+			}
 
-					// Border
-					if inp.Variant != InputGhost && sz.X > 0 && sz.Y > 0 {
-						paint.FillShape(gtx.Ops, borderCol,
-							clip.Stroke{
-								Path:  clip.UniformRRect(image.Rectangle{Max: sz}, radius).Path(gtx.Ops),
-								Width: float32(gtx.Dp(1)),
-							}.Op(),
-						)
-					}
-					return layout.Dimensions{Size: sz}
-				}),
-				layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-					gtx.Constraints.Min.X = gtx.Constraints.Max.X // fill full width so editor hit area covers the input
-					gtx.Constraints.Min.Y = h
-					return layout.Inset{
-						Left: th.Space3, Right: th.Space3,
-						Top: th.Space2, Bottom: th.Space2,
-					}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						if th.Shaper == nil {
-							th.Shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(defaultFonts()))
-						}
-						// Explicitly record text/selection materials so they always use
-						// theme colors, independent of paint state left by the background layer.
-						textMat := op.Record(gtx.Ops)
-						paint.ColorOp{Color: th.BaseContent}.Add(gtx.Ops)
-						textCallOp := textMat.Stop()
-						selMat := op.Record(gtx.Ops)
-						paint.ColorOp{Color: theme.WithAlpha(th.Primary, 80)}.Add(gtx.Ops)
-						selCallOp := selMat.Stop()
-						// Draw placeholder when editor is empty.
-						if inp.Editor.Text() == "" && inp.Placeholder != "" {
-							drawText(gtx, th, inp.Placeholder,
-								theme.Opacity(th.BaseContent, 0.4), th.FontSize, font.Normal)
-						}
-						return inp.Editor.Layout(gtx, th.Shaper, font.Font{}, th.FontSize, textCallOp, selCallOp)
-					})
-				}),
-			)
+			if inp.Variant != InputGhost {
+				return widget.Border{Color: borderCol, CornerRadius: th.RoundedLg, Width: 1}.Layout(gtx, field)
+			}
+			return field(gtx)
 		}),
 	)
 }

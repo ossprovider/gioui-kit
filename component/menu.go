@@ -68,7 +68,6 @@ func (m *Menu) WithBorder() *Menu {
 // Layout renders the menu.
 func (m *Menu) Layout(gtx layout.Context) layout.Dimensions {
 	th := m.th
-	radius := gtx.Dp(th.RoundedLg)
 	padding := layout.Inset{Top: th.Space2, Bottom: th.Space2, Left: th.Space3, Right: th.Space3}
 	if m.Compact {
 		padding = layout.Inset{Top: th.Space1, Bottom: th.Space1, Left: th.Space2, Right: th.Space2}
@@ -128,26 +127,15 @@ func (m *Menu) Layout(gtx layout.Context) layout.Dimensions {
 		})
 	}
 
-	if !m.Bordered {
-		return inner(gtx)
-	}
-
-	return layout.Stack{}.Layout(gtx,
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-			sz := gtx.Constraints.Min
-			defer clip.UniformRRect(image.Rectangle{Max: sz}, radius).Push(gtx.Ops).Pop()
+	if m.Bordered {
+		return widget.Border{Color: th.Base300, CornerRadius: th.RoundedLg, Width: 1}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Max}, gtx.Dp(th.RoundedLg)).Push(gtx.Ops).Pop()
 			paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
-			paint.FillShape(gtx.Ops, th.Base300,
-				clip.Stroke{
-					Path:  clip.UniformRRect(image.Rectangle{Max: sz}, radius).Path(gtx.Ops),
-					Width: float32(gtx.Dp(1)),
-				}.Op(),
-			)
-			return layout.Dimensions{Size: sz}
-		}),
-		layout.Stacked(inner),
-	)
+			return inner(gtx)
+		})
+	}
+	return inner(gtx)
 }
 
 func menuItemContent(gtx layout.Context, th *theme.Theme, item *MenuItem, col color.NRGBA) layout.Dimensions {

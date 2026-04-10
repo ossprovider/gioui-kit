@@ -3,6 +3,7 @@ package component
 import (
 	"image"
 	"image/color"
+	"strconv"
 
 	"gioui.org/font"
 	"gioui.org/io/pointer"
@@ -14,29 +15,38 @@ import (
 	"github.com/hongshengjie/gioui-kit/theme"
 )
 
-// RadioGroup renders a group of DaisyUI-style radio buttons.
+// RadioGroup renders a group of DaisyUI-style radio buttons backed by widget.Enum.
 type RadioGroup struct {
-	Items    []string
-	Selected int // index of selected item
-	Variant  BtnVariant
-	clicks   []widget.Clickable
-	th       *theme.Theme
+	Items   []string
+	Enum    widget.Enum
+	Variant BtnVariant
+	th      *theme.Theme
 }
 
 // NewRadioGroup creates a new radio group.
 func NewRadioGroup(th *theme.Theme, items []string) *RadioGroup {
-	return &RadioGroup{
+	r := &RadioGroup{
 		Items:   items,
-		clicks:  make([]widget.Clickable, len(items)),
 		Variant: BtnPrimary,
 		th:      th,
 	}
+	// Default to first item selected.
+	if len(items) > 0 {
+		r.Enum.Value = "0"
+	}
+	return r
 }
 
 // WithVariant sets the radio accent color.
 func (r *RadioGroup) WithVariant(v BtnVariant) *RadioGroup {
 	r.Variant = v
 	return r
+}
+
+// Selected returns the index of the currently selected radio item.
+func (r *RadioGroup) Selected() int {
+	i, _ := strconv.Atoi(r.Enum.Value)
+	return i
 }
 
 func (r *RadioGroup) accentColor() color.NRGBA {
@@ -66,26 +76,19 @@ func (r *RadioGroup) Layout(gtx layout.Context) layout.Dimensions {
 	outerSize := gtx.Dp(20)
 	innerSize := gtx.Dp(10)
 
-	// Handle clicks
-	for i := range r.clicks {
-		if r.clicks[i].Clicked(gtx) {
-			r.Selected = i
-		}
-	}
-
 	children := make([]layout.FlexChild, len(r.Items))
 	for i, item := range r.Items {
 		i, item := i, item
+		key := strconv.Itoa(i)
 		children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			isSelected := i == r.Selected
+			isSelected := r.Enum.Value == key
 			return layout.Inset{Bottom: th.Space2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						sz := image.Pt(outerSize, outerSize)
 						gtx.Constraints = layout.Exact(sz)
-						return r.clicks[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return r.Enum.Layout(gtx, key, func(gtx layout.Context) layout.Dimensions {
 							rect := image.Rectangle{Max: sz}
-							// Outer circle border
 							borderCol := th.Base300
 							if isSelected {
 								borderCol = accent
@@ -99,7 +102,6 @@ func (r *RadioGroup) Layout(gtx layout.Context) layout.Dimensions {
 									Width: float32(gtx.Dp(2)),
 								}.Op(),
 							)
-							// Inner dot when selected
 							if isSelected {
 								offset := (outerSize - innerSize) / 2
 								innerRect := image.Rect(offset, offset, offset+innerSize, offset+innerSize)

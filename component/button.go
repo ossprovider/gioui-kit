@@ -144,7 +144,7 @@ func (b *Button) fontSize() unit.Sp {
 func (b *Button) Layout(gtx layout.Context) layout.Dimensions {
 	th := b.th
 	bg, fg := b.bgColor()
-	radius := gtx.Dp(th.RoundedLg)
+	radius := th.RoundedLg
 
 	// Hover state
 	if b.Clickable.Hovered() && !b.Disabled {
@@ -160,40 +160,33 @@ func (b *Button) Layout(gtx layout.Context) layout.Dimensions {
 		fg = theme.Opacity(fg, 0.5)
 	}
 
-	return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Stack{Alignment: layout.Center}.Layout(gtx,
-			layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-				sz := gtx.Constraints.Min
-				defer clip.UniformRRect(image.Rectangle{Max: sz}, radius).Push(gtx.Ops).Pop()
-
-				// Background fill
-				if bg.A > 0 {
-					paint.ColorOp{Color: bg}.Add(gtx.Ops)
-					paint.PaintOp{}.Add(gtx.Ops)
-				}
-
-				// Outline variant border
-				if b.Variant == BtnOutline && sz.X > 0 && sz.Y > 0 {
-					paint.FillShape(gtx.Ops, th.BaseContent,
-						clip.Stroke{
-							Path:  clip.UniformRRect(image.Rectangle{Max: sz}, radius).Path(gtx.Ops),
-							Width: float32(gtx.Dp(1)),
-						}.Op(),
-					)
-				}
-
-				// Cursor
-				pointer.CursorPointer.Add(gtx.Ops)
-				return layout.Dimensions{Size: sz}
-			}),
-			layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-				return b.padding().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					if b.Loading {
-						return drawSpinner(gtx, fg, b.fontSize())
+	inner := func(gtx layout.Context) layout.Dimensions {
+		return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Stack{Alignment: layout.Center}.Layout(gtx,
+				layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+					sz := gtx.Constraints.Min
+					defer clip.UniformRRect(image.Rectangle{Max: sz}, gtx.Dp(radius)).Push(gtx.Ops).Pop()
+					if bg.A > 0 {
+						paint.ColorOp{Color: bg}.Add(gtx.Ops)
+						paint.PaintOp{}.Add(gtx.Ops)
 					}
-					return drawText(gtx, th, b.Text, fg, b.fontSize(), font.SemiBold)
-				})
-			}),
-		)
-	})
+					pointer.CursorPointer.Add(gtx.Ops)
+					return layout.Dimensions{Size: sz}
+				}),
+				layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+					return b.padding().Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						if b.Loading {
+							return drawSpinner(gtx, fg, b.fontSize())
+						}
+						return drawText(gtx, th, b.Text, fg, b.fontSize(), font.SemiBold)
+					})
+				}),
+			)
+		})
+	}
+
+	if b.Variant == BtnOutline {
+		return widget.Border{Color: th.BaseContent, CornerRadius: radius, Width: 1}.Layout(gtx, inner)
+	}
+	return inner(gtx)
 }

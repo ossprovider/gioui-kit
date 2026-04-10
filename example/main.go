@@ -613,7 +613,7 @@ func (a *App) pageComponents(gtx layout.Context) layout.Dimensions {
 
 		// Tab content
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			switch a.compTabs.Selected {
+			switch a.compTabs.Selected() {
 			case 1:
 				return a.sectionBadgesChips(gtx)
 			case 2:
@@ -1456,7 +1456,7 @@ func (a *App) sectionControls(gtx layout.Context) layout.Dimensions {
 						return a.radioGroup.Layout(gtx)
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return component.NewText(th, fmt.Sprintf("Selected: %s", a.radioGroup.Items[a.radioGroup.Selected])).Sm().WithColor(theme.Gray500).Layout(gtx)
+						return component.NewText(th, fmt.Sprintf("Selected: %s", a.radioGroup.Items[a.radioGroup.Selected()])).Sm().WithColor(theme.Gray500).Layout(gtx)
 					}),
 				)
 			})(gtx)

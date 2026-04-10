@@ -7,6 +7,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/widget"
 
 	"github.com/hongshengjie/gioui-kit/theme"
 )
@@ -34,46 +35,30 @@ func (c *Card) WithCompact() *Card {
 
 func (c *Card) Layout(gtx layout.Context, body layout.Widget) layout.Dimensions {
 	th := c.th
-	radius := gtx.Dp(th.RoundedXl)
 	padding := layout.UniformInset(th.Space6)
 	if c.Compact {
 		padding = layout.UniformInset(th.Space4)
 	}
 
-	return layout.Stack{}.Layout(gtx,
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-			sz := gtx.Constraints.Min
-			outerStack := clip.UniformRRect(image.Rectangle{Max: sz}, radius).Push(gtx.Ops)
-			defer outerStack.Pop()
-
-			if c.Bordered {
-				// Paint-over border: fill outer with border color, then overpaint center with background.
-				// Avoids clip.Stroke which can loop infinitely on zero-height rectangles.
-				paint.ColorOp{Color: th.Base300}.Add(gtx.Ops)
-				paint.PaintOp{}.Add(gtx.Ops)
-				bw := gtx.Dp(1)
-				inner := image.Rect(bw, bw, sz.X-bw, sz.Y-bw)
-				if inner.Dx() > 0 && inner.Dy() > 0 {
-					innerRadius := radius - bw
-					if innerRadius < 0 {
-						innerRadius = 0
-					}
-					innerStack := clip.UniformRRect(inner, innerRadius).Push(gtx.Ops)
-					paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
-					paint.PaintOp{}.Add(gtx.Ops)
-					innerStack.Pop()
-				}
-			} else {
+	inner := func(gtx layout.Context) layout.Dimensions {
+		return layout.Stack{}.Layout(gtx,
+			layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+				sz := gtx.Constraints.Min
+				defer clip.UniformRRect(image.Rectangle{Max: sz}, gtx.Dp(th.RoundedXl)).Push(gtx.Ops).Pop()
 				paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
 				paint.PaintOp{}.Add(gtx.Ops)
-			}
+				return layout.Dimensions{Size: sz}
+			}),
+			layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+				return padding.Layout(gtx, body)
+			}),
+		)
+	}
 
-			return layout.Dimensions{Size: sz}
-		}),
-		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-			return padding.Layout(gtx, body)
-		}),
-	)
+	if c.Bordered {
+		return widget.Border{Color: th.Base300, CornerRadius: th.RoundedXl, Width: 1}.Layout(gtx, inner)
+	}
+	return inner(gtx)
 }
 
 // CardWithHeader renders a card with a separate title section.

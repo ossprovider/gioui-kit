@@ -2,6 +2,7 @@ package component
 
 import (
 	"image"
+	"strconv"
 
 	"gioui.org/font"
 	"gioui.org/layout"
@@ -20,33 +21,35 @@ const (
 	TabLifted
 )
 
-// Tabs manages a tabbed interface.
+// Tabs manages a tabbed interface backed by widget.Enum for selection state.
 type Tabs struct {
 	Items    []string
-	Selected int
+	Enum     widget.Enum
 	Variant  TabVariant
-	clicks   []widget.Clickable
 	children []layout.FlexChild // reused across frames to avoid per-frame alloc
 	th       *theme.Theme
 }
 
 func NewTabs(th *theme.Theme, items []string) *Tabs {
-	return &Tabs{
-		Items:  items,
-		clicks: make([]widget.Clickable, len(items)),
-		th:     th,
+	t := &Tabs{
+		Items: items,
+		th:    th,
 	}
+	// Default to first tab selected.
+	if len(items) > 0 {
+		t.Enum.Value = "0"
+	}
+	return t
+}
+
+// Selected returns the index of the currently active tab.
+func (t *Tabs) Selected() int {
+	i, _ := strconv.Atoi(t.Enum.Value)
+	return i
 }
 
 func (t *Tabs) Layout(gtx layout.Context) layout.Dimensions {
 	th := t.th
-
-	// Check clicks
-	for i := range t.clicks {
-		if t.clicks[i].Clicked(gtx) {
-			t.Selected = i
-		}
-	}
 
 	if cap(t.children) < len(t.Items) {
 		t.children = make([]layout.FlexChild, len(t.Items))
@@ -54,9 +57,10 @@ func (t *Tabs) Layout(gtx layout.Context) layout.Dimensions {
 	t.children = t.children[:len(t.Items)]
 	for i, item := range t.Items {
 		i, item := i, item
+		key := strconv.Itoa(i)
 		t.children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			isActive := i == t.Selected
-			return t.clicks[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			isActive := t.Enum.Value == key
+			return t.Enum.Layout(gtx, key, func(gtx layout.Context) layout.Dimensions {
 				padding := layout.Inset{
 					Top: th.Space2, Bottom: th.Space2,
 					Left: th.Space4, Right: th.Space4,
@@ -77,7 +81,7 @@ func (t *Tabs) Layout(gtx layout.Context) layout.Dimensions {
 								return layout.Dimensions{}
 							}
 							sz := gtx.Constraints.Min
-							// Active indicator
+							// Active indicator underline
 							indicatorH := gtx.Dp(2)
 							indicatorRect := image.Rect(0, sz.Y-indicatorH, sz.X, sz.Y)
 							paint.FillShape(gtx.Ops, th.Primary,

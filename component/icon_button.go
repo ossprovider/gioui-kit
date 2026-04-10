@@ -116,34 +116,34 @@ func (b *IconButton) Layout(gtx layout.Context) layout.Dimensions {
 	sz := image.Pt(btnPx, btnPx)
 	gtx.Constraints = layout.Exact(sz)
 
-	return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Stack{Alignment: layout.Center}.Layout(gtx,
-			layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-				rect := image.Rectangle{Max: sz}
-				if bg.A > 0 {
-					defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
-					paint.ColorOp{Color: bg}.Add(gtx.Ops)
-					paint.PaintOp{}.Add(gtx.Ops)
-				}
-				if b.Variant == BtnOutline {
-					paint.FillShape(gtx.Ops, th.BaseContent,
-						clip.Stroke{
-							Path:  clip.UniformRRect(rect, radius).Path(gtx.Ops),
-							Width: float32(gtx.Dp(1)),
-						}.Op(),
-					)
-				}
-				pointer.CursorPointer.Add(gtx.Ops)
-				return layout.Dimensions{Size: sz}
-			}),
-			layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-				iconPx := gtx.Dp(iconDp)
-				gtx.Constraints = layout.Exact(image.Pt(iconPx, iconPx))
-				if b.Icon != nil {
-					return b.Icon.Layout(gtx, fg)
-				}
-				return layout.Dimensions{Size: image.Pt(iconPx, iconPx)}
-			}),
-		)
-	})
+	inner := func(gtx layout.Context) layout.Dimensions {
+		return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Stack{Alignment: layout.Center}.Layout(gtx,
+				layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+					rect := image.Rectangle{Max: sz}
+					if bg.A > 0 {
+						defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
+						paint.ColorOp{Color: bg}.Add(gtx.Ops)
+						paint.PaintOp{}.Add(gtx.Ops)
+					}
+					pointer.CursorPointer.Add(gtx.Ops)
+					return layout.Dimensions{Size: sz}
+				}),
+				layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+					iconPx := gtx.Dp(iconDp)
+					gtx.Constraints = layout.Exact(image.Pt(iconPx, iconPx))
+					if b.Icon != nil {
+						return b.Icon.Layout(gtx, fg)
+					}
+					return layout.Dimensions{Size: image.Pt(iconPx, iconPx)}
+				}),
+			)
+		})
+	}
+
+	if b.Variant == BtnOutline {
+		// Use circular radius for outline — convert px radius to dp approximation.
+		return widget.Border{Color: th.BaseContent, CornerRadius: btnDp / 2, Width: 1}.Layout(gtx, inner)
+	}
+	return inner(gtx)
 }

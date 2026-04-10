@@ -73,22 +73,17 @@ func (c *Checkbox) Layout(gtx layout.Context) layout.Dimensions {
 					defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
 					paint.ColorOp{Color: fillCol}.Add(gtx.Ops)
 					paint.PaintOp{}.Add(gtx.Ops)
-					// Draw vector checkmark
 					drawCheckmark(gtx.Ops, sz, checkCol)
 					return layout.Dimensions{Size: sz}
 				}
-				// Unchecked: border box
-				defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
-				paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
-				paint.PaintOp{}.Add(gtx.Ops)
-				paint.FillShape(gtx.Ops, th.Base300,
-					clip.Stroke{
-						Path:  clip.UniformRRect(rect, radius).Path(gtx.Ops),
-						Width: float32(gtx.Dp(2)),
-					}.Op(),
-				)
-				pointer.CursorPointer.Add(gtx.Ops)
-				return layout.Dimensions{Size: sz}
+				// Unchecked: use widget.Border for the border box.
+				return widget.Border{Color: th.Base300, CornerRadius: th.RoundedMd, Width: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					defer clip.UniformRRect(rect, radius).Push(gtx.Ops).Pop()
+					paint.ColorOp{Color: th.Base100}.Add(gtx.Ops)
+					paint.PaintOp{}.Add(gtx.Ops)
+					pointer.CursorPointer.Add(gtx.Ops)
+					return layout.Dimensions{Size: sz}
+				})
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -110,7 +105,6 @@ func (c *Checkbox) Layout(gtx layout.Context) layout.Dimensions {
 func drawCheckmark(ops *op.Ops, sz image.Point, col color.NRGBA) {
 	w := float32(sz.X)
 	h := float32(sz.Y)
-	// Checkmark points: short leg down-left, long leg up-right
 	x1, y1 := w*0.20, h*0.50
 	x2, y2 := w*0.42, h*0.72
 	x3, y3 := w*0.80, h*0.28
