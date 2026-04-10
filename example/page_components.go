@@ -610,37 +610,24 @@ func (a *App) sectionDataDisplay(gtx layout.Context) layout.Dimensions {
 		// Loading
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return sectionCard(th, "Loading", "Animated loading indicators", func(gtx layout.Context) layout.Dimensions {
-				return kit.FlexRow{Gap: 32, Alignment: kit.ItemsCenter}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return kit.FlexCol{Gap: 8}.Layout(gtx,
+				loadCol := func(label string, l *component.Loading) layout.FlexChild {
+					return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return kit.FlexCol{Gap: 8, Alignment: kit.ItemsCenter}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return component.NewText(th, "Spinner").Xs().WithColor(theme.Gray400).Layout(gtx)
+								return component.NewText(th, label).Xs().WithColor(theme.Gray400).Layout(gtx)
 							}),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return component.NewLoading(th).WithVariant(component.LoadingSpinner).Layout(gtx)
-							}),
-						)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return kit.FlexCol{Gap: 8}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return component.NewText(th, "Dots").Xs().WithColor(theme.Gray400).Layout(gtx)
-							}),
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return component.NewLoading(th).WithVariant(component.LoadingDots).WithSize(40).Layout(gtx)
+								return l.Layout(gtx)
 							}),
 						)
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return kit.FlexCol{Gap: 8}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return component.NewText(th, "Ring").Xs().WithColor(theme.Gray400).Layout(gtx)
-							}),
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return component.NewLoading(th).WithVariant(component.LoadingRing).WithColor(th.Secondary).Layout(gtx)
-							}),
-						)
-					}),
+					})
+				}
+				return kit.FlexRow{Gap: 24, Alignment: kit.ItemsCenter}.Layout(gtx,
+					loadCol("Spinner", component.NewLoading(th).WithVariant(component.LoadingSpinner).WithSize(36)),
+					loadCol("Dots", component.NewLoading(th).WithVariant(component.LoadingDots).WithSize(36)),
+					loadCol("Ring", component.NewLoading(th).WithVariant(component.LoadingRing).WithSize(36)),
+					loadCol("Spinner", component.NewLoading(th).WithVariant(component.LoadingSpinner).WithColor(th.Accent).WithSize(36)),
+					loadCol("Ring", component.NewLoading(th).WithVariant(component.LoadingRing).WithColor(th.Error).WithSize(36)),
 				)
 			})(gtx)
 		}),

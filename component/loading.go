@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -19,17 +20,17 @@ import (
 type LoadingVariant int
 
 const (
-	LoadingSpinner LoadingVariant = iota // rotating ring
+	LoadingSpinner LoadingVariant = iota // rotating ring of dots
 	LoadingDots                          // three bouncing dots
-	LoadingRing                          // thin ring
+	LoadingRing                          // thin spinning ring
 )
 
 // Loading is a DaisyUI-style loading indicator.
 type Loading struct {
-	Variant  LoadingVariant
-	Color    color.NRGBA
-	Size     unit.Dp
-	th       *theme.Theme
+	Variant LoadingVariant
+	Color   color.NRGBA
+	Size    unit.Dp
+	th      *theme.Theme
 }
 
 // NewLoading creates a new loading indicator.
@@ -62,7 +63,6 @@ func (l *Loading) WithSize(s unit.Dp) *Loading {
 
 // Layout renders the loading indicator.
 func (l *Loading) Layout(gtx layout.Context) layout.Dimensions {
-	// Invalidate every frame to animate
 	gtx.Execute(op.InvalidateCmd{At: gtx.Now.Add(16 * time.Millisecond)})
 
 	switch l.Variant {
@@ -79,12 +79,9 @@ func (l *Loading) layoutSpinner(gtx layout.Context) layout.Dimensions {
 	size := gtx.Dp(l.Size)
 	sz := image.Pt(size, size)
 
-	// Animate rotation based on time
 	t := float64(gtx.Now.UnixNano()) / float64(time.Second)
-	angle := t * 2 * math.Pi // one full rotation per second
+	angle := t * 2 * math.Pi
 
-	// Draw arc segments to simulate spinner
-	// We draw 8 dots around a circle with varying opacity
 	numDots := 8
 	dotSize := size / 6
 	radius := (size - dotSize) / 2
@@ -97,9 +94,10 @@ func (l *Loading) layoutSpinner(gtx layout.Context) layout.Dimensions {
 		opacity := float32(i+1) / float32(numDots)
 		col := theme.Opacity(l.Color, opacity)
 		rect := image.Rect(x, y, x+dotSize, y+dotSize)
-		defer clip.UniformRRect(rect, dotSize/2).Push(gtx.Ops).Pop()
+		s := clip.UniformRRect(rect, dotSize/2).Push(gtx.Ops)
 		paint.ColorOp{Color: col}.Add(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
+		s.Pop()
 	}
 
 	return layout.Dimensions{Size: sz}
@@ -113,34 +111,21 @@ func (l *Loading) layoutRing(gtx layout.Context) layout.Dimensions {
 		thick = 2
 	}
 
-	// Outer ring (faded track)
-	track := image.Rectangle{Max: sz}
-	paint.FillShape(gtx.Ops, theme.WithAlpha(l.Color, 30),
-		clip.Stroke{
-			Path:  clip.UniformRRect(track, size/2).Path(gtx.Ops),
-			Width: float32(thick),
-		}.Op(),
-	)
+	cx := float32(size) / 2
+	cy := float32(size) / 2
+	outerR := cx
+	innerR := cx - float32(thick)
 
-	// Animate: rotating highlight segment (approximated by varying top arc)
+	// Draw faded track (full ring)
+	drawArcSegment(gtx, cx, cy, outerR, innerR, -math.Pi/2, 2*math.Pi, theme.WithAlpha(l.Color, 40))
+
+	// Rotate and draw 270-degree colored arc
 	t := float64(gtx.Now.UnixNano()) / float64(time.Second)
-	_ = t
-
-	// Draw a quarter arc highlight at the top by masking with a rect
-	// Simple approach: draw a colored arc using clipped rectangle
-	innerSize := size - thick*2
-	innerOff := thick
-	innerRect := image.Rect(innerOff, innerOff, innerOff+innerSize, innerOff+innerSize)
-	_ = innerRect
-
-	// Full ring colored at primary (animated via rotation via ops.Transform not available here)
-	// Fall back to just a full colored ring for simplicity
-	paint.FillShape(gtx.Ops, l.Color,
-		clip.Stroke{
-			Path:  clip.UniformRRect(track, size/2).Path(gtx.Ops),
-			Width: float32(thick),
-		}.Op(),
-	)
+	angle := float32(math.Mod(t, 1.0) * 2 * math.Pi)
+	aff := f32.Affine2D{}.Rotate(f32.Pt(cx, cy), angle)
+	stack := op.Affine(aff).Push(gtx.Ops)
+	drawArcSegment(gtx, cx, cy, outerR, innerR, -math.Pi/2, 1.5*math.Pi, l.Color)
+	stack.Pop()
 
 	return layout.Dimensions{Size: sz}
 }
@@ -149,23 +134,22 @@ func (l *Loading) layoutDots(gtx layout.Context) layout.Dimensions {
 	dotSize := gtx.Dp(l.Size / 3)
 	gap := gtx.Dp(4)
 	totalW := 3*dotSize + 2*gap
-	totalH := dotSize
+	bounce := dotSize / 2
+	totalH := dotSize + bounce
 
 	t := float64(gtx.Now.UnixNano()) / float64(time.Second)
 
 	for i := 0; i < 3; i++ {
-		// Each dot bobs up/down with a phase offset
-		phase := t*4 - float64(i)*0.4
-		offset := int(float32(dotSize/3) * float32(math.Sin(phase)))
+		phase := t*3.0 - float64(i)*0.3
+		// offset: 0 at rest, negative = up
+		offset := int(float32(bounce/2) * float32(math.Sin(phase)))
 		x := i * (dotSize + gap)
-		y := dotSize/2 - dotSize/2 + offset
-		if y < 0 {
-			y = 0
-		}
+		y := bounce/2 - offset
 		rect := image.Rect(x, y, x+dotSize, y+dotSize)
-		defer clip.UniformRRect(rect, dotSize/2).Push(gtx.Ops).Pop()
+		s := clip.UniformRRect(rect, dotSize/2).Push(gtx.Ops)
 		paint.ColorOp{Color: l.Color}.Add(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
+		s.Pop()
 	}
 
 	return layout.Dimensions{Size: image.Pt(totalW, totalH)}
