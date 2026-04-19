@@ -45,6 +45,22 @@ func (s *Select) WithChevrons(down, up *widget.Icon) *Select {
 	return s
 }
 
+// SelectedIndex returns the index of the currently selected item.
+func (s *Select) SelectedIndex() int {
+	i, _ := strconv.Atoi(s.enum.Value)
+	if i < 0 || i >= len(s.Items) {
+		return 0
+	}
+	return i
+}
+
+// SetSelected sets the selected item by index.
+func (s *Select) SetSelected(i int) {
+	if i >= 0 && i < len(s.Items) {
+		s.enum.Value = strconv.Itoa(i)
+	}
+}
+
 // Value returns the currently selected item string.
 func (s *Select) Value() string {
 	if len(s.Items) == 0 {
